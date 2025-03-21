@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Rule Management</title>
+    <script>
+        async function fetchRules() {
+            let response = await fetch("http://127.0.0.1:5000/rules");  // Updated port
+            let rules = await response.json();
+            let tableBody = document.getElementById("rulesTable");
+            tableBody.innerHTML = "";
+            rules.forEach(rule => {
+                let row = `<tr>
+            <td>${rule.id}</td>
+            <td>${rule.condition}</td>
+            <td>${rule.action}</td>
+            <td>${rule.enabled ? "Enabled" : "Disabled"}</td>
+            <td>
+                <button onclick="deleteRule(${rule.id})">Delete</button>
+            </td>
+        </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        async function addRule() {
+            let condition = document.getElementById("condition").value;
+            let action = document.getElementById("action").value;
+            let enabled = document.getElementById("enabled").checked ? 1 : 0;
+
+            await fetch("http://127.0.0.1:5000/rules", { // Correct API URL
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ condition, action, enabled })
+            });
+
+            fetchRules(); // Refresh rules after adding
+        }
+
+        async function deleteRule(id) {
+            await fetch(`http://127.0.0.1:5000/rules/${id}`, { method: "DELETE" }); // Correct API URL
+            fetchRules();
+        }
+    </script>
+</head>
+
+<body onload="fetchRules()">
+    <h2>Fraud Rule Management</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Condition</th>
+                <th>Action</th>
+                <th>Status</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody id="rulesTable"></tbody>
+    </table>
+    <h3>Add New Rule</h3>
+    <input type="text" id="condition" placeholder="Condition">
+    <input type="text" id="action" placeholder="Action">
+    <label><input type="checkbox" id="enabled" checked> Enabled</label>
+    <button onclick="addRule()">Add Rule</button>
+</body>
+
+</html>
