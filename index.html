@@ -1,70 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraud Rule Management</title>
-    <script>
-        async function fetchRules() {
-            let response = await fetch("http://127.0.0.1:5000/rules");  // Updated port
-            let rules = await response.json();
-            let tableBody = document.getElementById("rulesTable");
-            tableBody.innerHTML = "";
-            rules.forEach(rule => {
-                let row = `<tr>
-            <td>${rule.id}</td>
-            <td>${rule.condition}</td>
-            <td>${rule.action}</td>
-            <td>${rule.enabled ? "Enabled" : "Disabled"}</td>
-            <td>
-                <button onclick="deleteRule(${rule.id})">Delete</button>
-            </td>
-        </tr>`;
-                tableBody.innerHTML += row;
-            });
-        }
-
-        async function addRule() {
-            let condition = document.getElementById("condition").value;
-            let action = document.getElementById("action").value;
-            let enabled = document.getElementById("enabled").checked ? 1 : 0;
-
-            await fetch("http://127.0.0.1:5000/rules", { // Correct API URL
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ condition, action, enabled })
-            });
-
-            fetchRules(); // Refresh rules after adding
-        }
-
-        async function deleteRule(id) {
-            await fetch(`http://127.0.0.1:5000/rules/${id}`, { method: "DELETE" }); // Correct API URL
-            fetchRules();
-        }
-    </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fraud Detection & Rule Management</title>
+  <!-- Tailwind CSS from CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-gray-100 min-h-screen p-4">
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 text-center">Fraud Detection & Rule Management</h1>
+  </header>
 
-<body onload="fetchRules()">
-    <h2>Fraud Rule Management</h2>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Condition</th>
-                <th>Action</th>
-                <th>Status</th>
-                <th>Delete</th>
-            </tr>
-        </thead>
-        <tbody id="rulesTable"></tbody>
+  <!-- Navigation Tabs -->
+  <nav class="mb-8">
+    <ul class="flex justify-center space-x-4">
+      <li><button onclick="showSection('detection')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Detection</button></li>
+      <li><button onclick="showSection('rules')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Rules</button></li>
+    </ul>
+  </nav>
+
+  <!-- Fraud Detection Section -->
+  <section id="detection" class="space-y-8">
+    <!-- Single Transaction Form -->
+    <div class="w-full max-w-lg mx-auto bg-white p-6 rounded shadow-md">
+      <h2 class="text-2xl font-bold mb-4 text-gray-700">Single Transaction</h2>
+      <form id="fraudForm" class="space-y-4">
+        <div>
+          <label for="transaction_id" class="block text-gray-700 font-semibold">Transaction ID:</label>
+          <input type="text" id="transaction_id" name="transaction_id" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div>
+          <label for="transaction_amount" class="block text-gray-700 font-semibold">Transaction Amount:</label>
+          <input type="number" id="transaction_amount" name="transaction_amount" step="any" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div>
+          <label for="transaction_channel" class="block text-gray-700 font-semibold">Transaction Channel:</label>
+          <select id="transaction_channel" name="transaction_channel" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="online">Online</option>
+            <option value="mobile">Mobile</option>
+            <option value="pos">POS</option>
+          </select>
+        </div>
+        <div>
+          <label for="transaction_payment_mode_anonymous" class="block text-gray-700 font-semibold">Payment Mode Anonymous (0/1):</label>
+          <input type="number" id="transaction_payment_mode_anonymous" name="transaction_payment_mode_anonymous" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div>
+          <label for="payment_gateway_bank_anonymous" class="block text-gray-700 font-semibold">Payment Gateway Bank Anonymous (0/1):</label>
+          <input type="number" id="payment_gateway_bank_anonymous" name="payment_gateway_bank_anonymous" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div>
+          <label for="payer_browser_anonymous" class="block text-gray-700 font-semibold">Payer Browser Anonymous (0/1):</label>
+          <input type="number" id="payer_browser_anonymous" name="payer_browser_anonymous" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label for="transaction_hour" class="block text-gray-700 font-semibold">Transaction Hour:</label>
+            <input type="number" id="transaction_hour" name="transaction_hour" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label for="transaction_day" class="block text-gray-700 font-semibold">Transaction Day:</label>
+            <input type="number" id="transaction_day" name="transaction_day" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label for="transaction_month" class="block text-gray-700 font-semibold">Transaction Month:</label>
+            <input type="number" id="transaction_month" name="transaction_month" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">Submit Transaction</button>
+      </form>
+      <div class="mt-4">
+        <h3 class="text-xl font-semibold text-gray-700">Response:</h3>
+        <pre id="result" class="bg-gray-100 p-4 rounded shadow-md overflow-auto"></pre>
+      </div>
+    </div>
+
+    <!-- CSV File Upload Section -->
+    <div class="w-full max-w-lg mx-auto bg-white p-6 rounded shadow-md">
+      <h2 class="text-2xl font-bold mb-4 text-gray-700">Upload CSV for Batch Transactions</h2>
+      <form id="csvForm" class="space-y-4">
+        <input type="file" id="csvFile" name="csvFile" accept=".csv" class="block w-full text-gray-700" />
+        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-400">Upload CSV</button>
+      </form>
+      <div class="mt-4">
+        <h3 class="text-xl font-semibold text-gray-700">CSV Upload Response:</h3>
+        <pre id="csvResult" class="bg-gray-100 p-4 rounded shadow-md overflow-auto"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fraud Rule Management Section -->
+  <section id="rules" class="hidden w-full max-w-4xl mx-auto bg-white p-6 rounded shadow-md">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Fraud Rule Management</h2>
+    <table class="min-w-full border-collapse">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border px-4 py-2 text-gray-700">ID</th>
+          <th class="border px-4 py-2 text-gray-700">Condition</th>
+          <th class="border px-4 py-2 text-gray-700">Action</th>
+          <th class="border px-4 py-2 text-gray-700">Status</th>
+          <th class="border px-4 py-2 text-gray-700">Delete</th>
+        </tr>
+      </thead>
+      <tbody id="rulesTable"></tbody>
     </table>
-    <h3>Add New Rule</h3>
-    <input type="text" id="condition" placeholder="Condition">
-    <input type="text" id="action" placeholder="Action">
-    <label><input type="checkbox" id="enabled" checked> Enabled</label>
-    <button onclick="addRule()">Add Rule</button>
-</body>
+    <div class="mt-6">
+      <h3 class="text-xl font-semibold text-gray-700 mb-2">Add New Rule</h3>
+      <div class="space-y-4">
+        <input type="text" id="condition" placeholder="Condition" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400" />
+        <input type="text" id="action" placeholder="Action" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400" />
+        <div>
+          <label class="inline-flex items-center">
+            <input type="checkbox" id="enabled" checked class="form-checkbox" />
+            <span class="ml-2 text-gray-700">Enabled</span>
+          </label>
+        </div>
+        <button onclick="addRule()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-400">Add Rule</button>
+      </div>
+    </div>
+  </section>
 
+  <script>
+    // Navigation to show/hide sections
+    function showSection(section) {
+      document.getElementById("detection").classList.toggle("hidden", section !== "detection");
+      document.getElementById("rules").classList.toggle("hidden", section !== "rules");
+    }
+
+    // Handle single transaction form submission
+    document.getElementById("fraudForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const data = {};
+      formData.forEach((value, key) => {
+        data[key] = value;
+      });
+      // Convert numeric fields
+      data.transaction_amount = parseFloat(data.transaction_amount);
+      data.transaction_payment_mode_anonymous = parseInt(data.transaction_payment_mode_anonymous);
+      data.payment_gateway_bank_anonymous = parseInt(data.payment_gateway_bank_anonymous);
+      data.payer_browser_anonymous = parseInt(data.payer_browser_anonymous);
+      data.transaction_hour = parseInt(data.transaction_hour);
+      data.transaction_day = parseInt(data.transaction_day);
+      data.transaction_month = parseInt(data.transaction_month);
+
+      fetch("/detect_fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        document.getElementById("result").innerText = JSON.stringify(result, null, 2);
+      })
+      .catch(err => {
+        document.getElementById("result").innerText = "Error: " + err;
+      });
+    });
+
+    // Handle CSV file upload submission
+    document.getElementById("csvForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById("csvFile");
+      if (!fileInput.files.length) {
+        alert("Please select a CSV file.");
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const csvData = event.target.result;
+        const lines = csvData.split("\n").filter(line => line.trim() !== "");
+        const headers = lines[0].split(",");
+        const transactions = lines.slice(1).map(line => {
+          const values = line.split(",");
+          let transaction = {};
+          headers.forEach((header, i) => {
+            transaction[header.trim()] = values[i] ? values[i].trim() : "";
+          });
+          return transaction;
+        });
+        fetch("/detect_fraud_batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactions: transactions })
+        })
+        .then(response => response.json())
+        .then(result => {
+          document.getElementById("csvResult").innerText = JSON.stringify(result, null, 2);
+        })
+        .catch(err => {
+          document.getElementById("csvResult").innerText = "Error: " + err;
+        });
+      };
+      reader.readAsText(file);
+    });
+
+    // Fetch and display fraud rules from the backend
+    async function fetchRules() {
+      let response = await fetch("/rules");
+      let rules = await response.json();
+      let tableBody = document.getElementById("rulesTable");
+      tableBody.innerHTML = "";
+      rules.forEach(rule => {
+        let row = `<tr class="text-center">
+          <td class="border px-4 py-2">${rule.id}</td>
+          <td class="border px-4 py-2">${rule.condition}</td>
+          <td class="border px-4 py-2">${rule.action}</td>
+          <td class="border px-4 py-2">${rule.enabled ? "Enabled" : "Disabled"}</td>
+          <td class="border px-4 py-2">
+            <button onclick="deleteRule(${rule.id})" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded">Delete</button>
+          </td>
+        </tr>`;
+        tableBody.innerHTML += row;
+      });
+    }
+
+    // Add new fraud rule
+    async function addRule() {
+      let condition = document.getElementById("condition").value;
+      let action = document.getElementById("action").value;
+      let enabled = document.getElementById("enabled").checked ? 1 : 0;
+      await fetch("/rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ condition, action, enabled })
+      });
+      fetchRules();
+    }
+
+    // Delete a fraud rule
+    async function deleteRule(id) {
+      await fetch(`/rules/${id}`, { method: "DELETE" });
+      fetchRules();
+    }
+
+    // Load the rules when the rules section is shown
+    window.onload = () => {
+      fetchRules();
+      showSection("detection");
+    };
+  </script>
+</body>
 </html>

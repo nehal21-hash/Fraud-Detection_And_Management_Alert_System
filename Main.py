@@ -4,8 +4,8 @@ import numpy as np
 import sqlite3
 from flask_cors import CORS
 
-# Initialize Flask app and allow cross-origin requests.
-# If you prefer to use a templates folder, remove template_folder parameter and place index.html in a folder named 'templates'
+# Initialize Flask app and enable CORS.
+# If you use a templates folder, remove template_folder parameter.
 app = Flask(__name__, template_folder='.')
 CORS(app)
 
@@ -53,7 +53,7 @@ def init_fraud_detection_db():
             transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    # Create fraud reports table (if needed)
+    # Create fraud reports table if needed
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS fraud_reports (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +99,7 @@ def detect_fraud():
 
         transaction_id = safe_get(data, "transaction_id", "unknown")
 
-        # Encode categorical values (e.g., transaction_channel) as done during training.
+        # Encode categorical values (e.g., transaction_channel)
         data["transaction_channel"] = channel_mapping.get(safe_get(data, "transaction_channel"), -1)
 
         # Create feature vector from input data
@@ -114,12 +114,12 @@ def detect_fraud():
             int(safe_get(data, "transaction_month"))
         ]).reshape(1, -1)
 
-        # Check if any active fraud rule flags this transaction.
+        # Check rules
         rules = get_rules()
         for condition, action, enabled in rules:
             if enabled:
                 try:
-                    # Safely evaluate the condition using only the allowed fields from data.
+                    # Evaluate condition using only allowed data fields.
                     if eval(condition, {"__builtins__": None}, data):
                         safe_keywords = ["safe", "approved", "all good", "verified", "trusted"]
                         is_fraud = not any(keyword in action.lower() for keyword in safe_keywords)
@@ -254,20 +254,17 @@ def update_rule(rule_id):
 def delete_rule(rule_id):
     conn = sqlite3.connect("rules.db")
     cursor = conn.cursor()
-
     # Delete the selected rule
     cursor.execute("DELETE FROM fraud_rules WHERE id=?", (rule_id,))
     conn.commit()
-
     # Retrieve remaining rules sorted by ID
     cursor.execute("SELECT * FROM fraud_rules ORDER BY id")
     rules = cursor.fetchall()
-
-    # Reset the table and re-insert with new sequential IDs
+    # Reset table and reinsert with new sequential IDs
     cursor.execute("DELETE FROM fraud_rules")
     cursor.execute("DELETE FROM sqlite_sequence WHERE name='fraud_rules'")
     for index, rule in enumerate(rules, start=1):
-        cursor.execute("INSERT INTO fraud_rules (id, condition, action, enabled) VALUES (?, ?, ?, ?)", 
+        cursor.execute("INSERT INTO fraud_rules (id, condition, action, enabled) VALUES (?, ?, ?, ?)",
                        (index, rule[1], rule[2], rule[3]))
     conn.commit()
     conn.close()
